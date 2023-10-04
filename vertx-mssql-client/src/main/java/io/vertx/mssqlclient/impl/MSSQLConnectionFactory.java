@@ -46,10 +46,13 @@ public class MSSQLConnectionFactory extends ConnectionFactoryBase<MSSQLConnectOp
   }
 
   private Future<Connection> connectOrRedirect(MSSQLConnectOptions options, ContextInternal context, int redirections) {
+    return this.connectOrRedirect(options, context, redirections, options.getSocketAddress());
+  }
+
+  private Future<Connection> connectOrRedirect(MSSQLConnectOptions options, ContextInternal context, int redirections, SocketAddress server) {
     if (redirections > 1) {
       return context.failedFuture("The client can be redirected only once");
     }
-    SocketAddress server = options.getSocketAddress();
     boolean clientSslConfig = options.isSsl();
     int desiredPacketSize = options.getPacketSize();
     // Always start unencrypted, the connection will be upgraded if client and server agree
@@ -66,7 +69,7 @@ public class MSSQLConnectionFactory extends ConnectionFactoryBase<MSSQLConnectOp
         }
         Promise<Void> closePromise = context.promise();
         conn.close(null, closePromise);
-        return closePromise.future().transform(v -> connectOrRedirect(options, context, redirections + 1));
+        return closePromise.future().transform(v -> connectOrRedirect(options, context, redirections + 1, alternateServer));
       });
   }
 
